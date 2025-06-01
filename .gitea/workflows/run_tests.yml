@@ -32,8 +32,9 @@ jobs:
         path: pytest-results.xml
         retention-days: 5
 
-    - uses: actions/upload-artifact@v4  # upload test results
-      if: ${{ !cancelled() }}           # run this step even if previous step failed
+    - uses: dorny/test-reporter@v2
       with:
-        name: pytest-results
-        path: pytest-results.xml
+        artifact: pytest-results          # artifact name
+        name: Pytest Tests                # Name of the check run which will be created
+        path: '*.xml'                     # Path to test results (inside artifact .zip)
+        reporter: jest-junit              # Format of test results
