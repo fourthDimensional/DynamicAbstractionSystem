@@ -141,22 +141,36 @@ def draw_grid(screen, camera, showing_grid=True):
 
     # Draw vertical grid lines (only if zoom is high enough to see them clearly)
     if effective_cell_size > 4:
-        for i in range(GRID_WIDTH + 1):
-            line_x = grid_left + i * effective_cell_size
-            if 0 <= line_x <= SCREEN_WIDTH:
-                start_y = max(0, grid_top)
-                end_y = min(SCREEN_HEIGHT, grid_bottom)
-                if start_y < end_y:
-                    pygame.draw.line(screen, GRAY, (line_x, start_y), (line_x, end_y))
+        # Precompute grid boundaries
+        vertical_lines = []
+        horizontal_lines = []
 
-        # Draw horizontal grid lines
-        for i in range(GRID_HEIGHT + 1):
-            line_y = grid_top + i * effective_cell_size
-            if 0 <= line_y <= SCREEN_HEIGHT:
-                start_x = max(0, grid_left)
-                end_x = min(SCREEN_WIDTH, grid_right)
-                if start_x < end_x:
-                    pygame.draw.line(screen, GRAY, (start_x, line_y), (end_x, line_y))
+        for i in range(max(GRID_WIDTH, GRID_HEIGHT) + 1):
+            # Vertical lines
+            if i <= GRID_WIDTH:
+                line_x = grid_left + i * effective_cell_size
+                if 0 <= line_x <= SCREEN_WIDTH:
+                    start_y = max(0, grid_top)
+                    end_y = min(SCREEN_HEIGHT, grid_bottom)
+                    if start_y < end_y:
+                        vertical_lines.append(((line_x, start_y), (line_x, end_y)))
+
+            # Horizontal lines
+            if i <= GRID_HEIGHT:
+                line_y = grid_top + i * effective_cell_size
+                if 0 <= line_y <= SCREEN_HEIGHT:
+                    start_x = max(0, grid_left)
+                    end_x = min(SCREEN_WIDTH, grid_right)
+                    if start_x < end_x:
+                        horizontal_lines.append(((start_x, line_y), (end_x, line_y)))
+
+        # Draw all vertical lines in one batch
+        for start, end in vertical_lines:
+            pygame.draw.line(screen, GRAY, start, end)
+
+        # Draw all horizontal lines in one batch
+        for start, end in horizontal_lines:
+            pygame.draw.line(screen, GRAY, start, end)
 
 
 def main():
