@@ -32,9 +32,6 @@ jobs:
         path: pytest-results.xml
         retention-days: 5
 
-    - uses: dorny/test-reporter@v2
-      with:
-        artifact: pytest-results          # artifact name
-        name: Pytest Tests                # Name of the check run which will be created
-        path: '*.xml'                     # Path to test results (inside artifact .zip)
-        reporter: jest-junit              # Format of test results
+    - name: Print test summary
+      if: always()
+      run: uv run pytest tests --tb=short || true
