@@ -6,8 +6,8 @@ import sys
 pygame.init()
 
 # Constants
-SCREEN_WIDTH = 1920/2
-SCREEN_HEIGHT = 1080/2
+SCREEN_WIDTH = 1920 / 2
+SCREEN_HEIGHT = 1080 / 2
 BLACK = (0, 0, 0)
 DARK_GRAY = (64, 64, 64)
 GRAY = (128, 128, 128)
@@ -18,7 +18,7 @@ GRID_WIDTH = 20  # Number of cells horizontally
 GRID_HEIGHT = 15  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
-DEFAULT_TPS = 20 # Amount of ticks per second for the simulation
+DEFAULT_TPS = 20  # Amount of ticks per second for the simulation
 
 
 class Camera:
@@ -50,7 +50,9 @@ class Camera:
             self.target_y = 0
 
         # Smooth camera movement with drift
-        smoothing_factor = 1 - pow(1 - self.smoothing, deltatime * 60)  # Adjust smoothing based on deltatime
+        smoothing_factor = 1 - pow(
+            1 - self.smoothing, deltatime * 60
+        )  # Adjust smoothing based on deltatime
         self.x += (self.target_x - self.x) * smoothing_factor
         self.y += (self.target_y - self.y) * smoothing_factor
 
@@ -126,14 +128,21 @@ def draw_grid(screen, camera, showing_grid=True):
         return  # Exit early if grid is not visible
 
     # Check if grid is visible on screen
-    if (grid_right < 0 or grid_left > SCREEN_WIDTH or
-            grid_bottom < 0 or grid_top > SCREEN_HEIGHT):
+    if (
+            grid_right < 0
+            or grid_left > SCREEN_WIDTH
+            or grid_bottom < 0
+            or grid_top > SCREEN_HEIGHT
+    ):
         return  # Grid is completely off-screen
 
     # Fill the grid area with dark gray background
-    grid_rect = pygame.Rect(max(0, grid_left), max(0, grid_top),
-                            min(SCREEN_WIDTH, grid_right) - max(0, grid_left),
-                            min(SCREEN_HEIGHT, grid_bottom) - max(0, grid_top))
+    grid_rect = pygame.Rect(
+        max(0, grid_left),
+        max(0, grid_top),
+        min(SCREEN_WIDTH, grid_right) - max(0, grid_left),
+        min(SCREEN_HEIGHT, grid_bottom) - max(0, grid_top),
+    )
 
     # Only draw if the rectangle has positive dimensions
     if grid_rect.width > 0 and grid_rect.height > 0:
@@ -181,7 +190,7 @@ def main():
 
     is_showing_grid = True  # Flag to control grid visibility
 
-    font = pygame.font.Font('freesansbold.ttf', 16)
+    font = pygame.font.Font("freesansbold.ttf", 16)
 
     tick_interval = 1.0 / DEFAULT_TPS  # Time per tick
     last_tick_time = time.perf_counter()  # Tracks the last tick time
