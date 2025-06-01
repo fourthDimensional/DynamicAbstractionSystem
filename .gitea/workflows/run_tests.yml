@@ -29,8 +29,9 @@ jobs:
     - name: Run tests
       run: uv run pytest tests --junit-xml=pytest-results.xml
 
-    - name: Publish Test Results
+    - name: Upload test results
       if: always()
-      uses: actions/upload-test-results@v2
+      uses: gitea.com/actions/upload-artifact@v1
       with:
-        files: pytest-results.xml
+        name: pytest-results
+        path: pytest-results.xml
