@@ -1,10 +1,10 @@
-#   - your tests are in a folder called tests
-- repo: local
-  hooks:
-  - id: pytest
-    name: pytest
-    entry: ./.venv/bin/pytest tests
-    language: system
-    types: [python]
-    pass_filenames: false
-    always_run: true
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: python -m pytest tests
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
