@@ -23,7 +23,7 @@ GRID_WIDTH = 20  # Number of cells horizontally
 GRID_HEIGHT = 15  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
-DEFAULT_TPS = 200  # Amount of ticks per second for the simulation
+DEFAULT_TPS = 20  # Amount of ticks per second for the simulation
 
 
 class Camera:

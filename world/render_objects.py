@@ -21,10 +21,10 @@ class FoodObject:
     def tick(self):
         self.decay += 1
 
-        if (self.decay > 255):
+        if self.decay > 255:
             self.decay = 0
 
     def render(self, camera, screen):
         if camera.is_in_view(*self.position.get_position()):
-            pygame.draw.circle(screen, (255,self.decay,0), camera.world_to_screen(*self.position.get_position()), 5 * camera.zoom)
+            pygame.draw.circle(screen, (255-self.decay,self.decay,0), camera.world_to_screen(*self.position.get_position()), 5 * camera.zoom)
 
