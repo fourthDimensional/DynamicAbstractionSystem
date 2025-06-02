@@ -1,6 +1,7 @@
 import pygame
 import time
 import sys
+import random
 
 from world.world import World, Position
 from world.render_objects import DebugRenderObject, FoodObject
@@ -226,7 +227,9 @@ def main():
     world = World()
 
     world.add_object(DebugRenderObject(Position(0,0)))
-    world.add_object(FoodObject(Position(100, 0)))
+
+    # setting the seed to 67 >_<
+    random.seed(67)
 
     running = True
     while running:
@@ -271,6 +274,14 @@ def main():
             print("Tick logic executed")
             world.tick_all()
 
+            # gets every object in the world and returns amount of FoodObjects
+            objects = world.get_objects()
+            food = len([obj for obj in objects if isinstance(obj, FoodObject)])
+            print(f"Food count: {food}")
+            if food < 10:
+                for i in range(10 - food):
+                    world.add_object(FoodObject(Position(random.randint(-200, 200), random.randint(-200, 200))))
+
         # Calculate TPS every second
         if current_time - last_tps_time >= 1.0:
             actual_tps = tick_counter
@@ -302,6 +313,12 @@ def main():
         tps_rect = tps_text.get_rect()
         tps_rect.bottomright = (SCREEN_WIDTH - 10, SCREEN_HEIGHT - 10)
         screen.blit(tps_text, tps_rect)
+
+        # Render camera position and speed in bottom left
+        cam_text = font.render(f"Camera: ({camera.x:.2f}, {camera.y:.2f}), Speed: {camera.speed:.2f}", True, WHITE)
+        cam_rect = cam_text.get_rect()
+        cam_rect.bottomleft = (10, SCREEN_HEIGHT - 10)
+        screen.blit(cam_text, cam_rect)
 
         # Update display
         pygame.display.flip()
