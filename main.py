@@ -2,6 +2,9 @@ import pygame
 import time
 import sys
 
+from world.world import World, Position
+from world.render_objects import DebugRenderObject, FoodObject
+
 # Initialize Pygame
 pygame.init()
 
@@ -12,13 +15,15 @@ BLACK = (0, 0, 0)
 DARK_GRAY = (64, 64, 64)
 GRAY = (128, 128, 128)
 WHITE = (255, 255, 255)
+RENDER_BUFFER = 50
+SPEED = 700 # Pixels per second
 
 # Grid settings
 GRID_WIDTH = 20  # Number of cells horizontally
 GRID_HEIGHT = 15  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
-DEFAULT_TPS = 20  # Amount of ticks per second for the simulation
+DEFAULT_TPS = 200  # Amount of ticks per second for the simulation
 
 
 class Camera:
@@ -27,10 +32,10 @@ class Camera:
         self.y = 0
         self.target_x = 0
         self.target_y = 0
-        self.speed = 700  # Pixels per second
         self.zoom = 1.0
         self.target_zoom = 1.0
         self.smoothing = 0.15  # Higher = more responsive, lower = more smooth
+        self.speed = SPEED
         self.zoom_smoothing = 0.10
         self.is_panning = False
         self.last_mouse_pos = None
@@ -93,14 +98,27 @@ class Camera:
         # Convert screen coordinates to world coordinates
         world_x = (screen_x - SCREEN_WIDTH // 2 + self.x * self.zoom) / self.zoom
         world_y = (screen_y - SCREEN_HEIGHT // 2 + self.y * self.zoom) / self.zoom
-        # Adjust for grid centering
-        world_x += GRID_WIDTH * CELL_SIZE / 2
-        world_y += GRID_HEIGHT * CELL_SIZE / 2
-        # Convert to grid coordinates
-        world_x = int(world_x // CELL_SIZE)
-        world_y = int(world_y // CELL_SIZE)
 
         return world_x, world_y
+
+    def is_in_view(self, obj_x, obj_y, margin=0):
+        half_w = (SCREEN_WIDTH + (RENDER_BUFFER * self.zoom)) / (2 * self.zoom)
+        half_h = (SCREEN_HEIGHT + (RENDER_BUFFER * self.zoom)) / (2 * self.zoom)
+        cam_left = self.x - half_w
+        cam_right = self.x + half_w
+        cam_top = self.y - half_h
+        cam_bottom = self.y + half_h
+        return (cam_left - margin <= obj_x <= cam_right + margin and
+                cam_top - margin <= obj_y <= cam_bottom + margin)
+
+    def world_to_screen(self, obj_x, obj_y):
+        screen_x = (obj_x - self.x) * self.zoom + SCREEN_WIDTH // 2
+        screen_y = (obj_y - self.y) * self.zoom + SCREEN_HEIGHT // 2
+        return int(screen_x), int(screen_y)
+
+    def get_relative_size(self, world_size):
+        # Converts a world size (e.g., radius or width/height) to screen pixels
+        return int(world_size * self.zoom)
 
 
 def draw_grid(screen, camera, showing_grid=True):
@@ -181,7 +199,6 @@ def draw_grid(screen, camera, showing_grid=True):
         for start, end in horizontal_lines:
             pygame.draw.line(screen, GRAY, start, end)
 
-
 def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), vsync=1)
     pygame.display.set_caption("Dynamic Abstraction System Testing")
@@ -205,6 +222,12 @@ def main():
     print("R - Reset camera to origin")
     print("ESC or close window - Exit")
 
+    # Initialize world
+    world = World()
+
+    world.add_object(DebugRenderObject(Position(0,0)))
+    world.add_object(FoodObject(Position(100, 0)))
+
     running = True
     while running:
         deltatime = clock.get_time() / 1000.0  # Convert milliseconds to seconds
@@ -218,6 +241,12 @@ def main():
                     running = False
                 if event.key == pygame.K_g:
                     is_showing_grid = not is_showing_grid
+                if event.key == pygame.K_UP:
+                    if camera.speed < 2100:
+                        camera.speed += 350
+                if event.key == pygame.K_DOWN:
+                    if camera.speed > 350:
+                        camera.speed -= 350
             elif event.type == pygame.MOUSEWHEEL:
                 camera.handle_zoom(event.y)
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -240,6 +269,7 @@ def main():
             tick_counter += 1
             # Add your tick-specific logic here
             print("Tick logic executed")
+            world.tick_all()
 
         # Calculate TPS every second
         if current_time - last_tps_time >= 1.0:
@@ -247,8 +277,12 @@ def main():
             tick_counter = 0
             last_tps_time += 1.0
 
-        # Draw everything
+        # Draw the reference grid
         draw_grid(screen, camera, is_showing_grid)
+
+        # Render everything in the world
+        world.render_all(camera, screen)
+
 
         # Render mouse position as text in top left of screen
         mouse_x, mouse_y = camera.get_real_coordinates(*pygame.mouse.get_pos())
