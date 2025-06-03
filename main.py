@@ -3,7 +3,8 @@ import time
 import sys
 
 from world.world import World, Position
-from world.render_objects import DebugRenderObject, FoodObject
+from world.render_objects import DebugRenderObject
+from world.simulation_interface import Camera
 
 # Initialize Pygame
 pygame.init()
@@ -16,109 +17,13 @@ DARK_GRAY = (64, 64, 64)
 GRAY = (128, 128, 128)
 WHITE = (255, 255, 255)
 RENDER_BUFFER = 50
-SPEED = 700 # Pixels per second
 
 # Grid settings
 GRID_WIDTH = 20  # Number of cells horizontally
 GRID_HEIGHT = 15  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
-DEFAULT_TPS = 200  # Amount of ticks per second for the simulation
-
-
-class Camera:
-    def __init__(self):
-        self.x = 0
-        self.y = 0
-        self.target_x = 0
-        self.target_y = 0
-        self.zoom = 1.0
-        self.target_zoom = 1.0
-        self.smoothing = 0.15  # Higher = more responsive, lower = more smooth
-        self.speed = SPEED
-        self.zoom_smoothing = 0.10
-        self.is_panning = False
-        self.last_mouse_pos = None
-
-    def update(self, keys, deltatime):
-        # Update target position based on input
-        if keys[pygame.K_w]:
-            self.target_y -= self.speed * deltatime / self.zoom
-        if keys[pygame.K_s]:
-            self.target_y += self.speed * deltatime / self.zoom
-        if keys[pygame.K_a]:
-            self.target_x -= self.speed * deltatime / self.zoom
-        if keys[pygame.K_d]:
-            self.target_x += self.speed * deltatime / self.zoom
-        if keys[pygame.K_r]:
-            self.target_x = 0
-            self.target_y = 0
-
-        # Smooth camera movement with drift
-        smoothing_factor = 1 - pow(
-            1 - self.smoothing, deltatime * 60
-        )  # Adjust smoothing based on deltatime
-        self.x += (self.target_x - self.x) * smoothing_factor
-        self.y += (self.target_y - self.y) * smoothing_factor
-
-        # Smooth zoom
-        zoom_smoothing_factor = 1 - pow(1 - self.zoom_smoothing, deltatime * 60)
-        self.zoom += (self.target_zoom - self.zoom) * zoom_smoothing_factor
-
-    def handle_zoom(self, zoom_delta):
-        # Zoom in/out with mouse wheel
-        zoom_factor = 1.1
-        if zoom_delta > 0:  # Zoom in
-            self.target_zoom *= zoom_factor
-        elif zoom_delta < 0:  # Zoom out
-            self.target_zoom /= zoom_factor
-
-        # Clamp zoom levels
-        self.target_zoom = max(0.1, min(5.0, self.target_zoom))
-
-    def start_panning(self, mouse_pos):
-        self.is_panning = True
-        self.last_mouse_pos = mouse_pos
-
-    def stop_panning(self):
-        self.is_panning = False
-        self.last_mouse_pos = None
-
-    def pan(self, mouse_pos):
-        if self.is_panning and self.last_mouse_pos:
-            dx = mouse_pos[0] - self.last_mouse_pos[0]
-            dy = mouse_pos[1] - self.last_mouse_pos[1]
-            self.x -= dx / self.zoom
-            self.y -= dy / self.zoom
-            self.target_x = self.x  # Sync target position with actual position
-            self.target_y = self.y
-            self.last_mouse_pos = mouse_pos
-
-    def get_real_coordinates(self, screen_x, screen_y):
-        # Convert screen coordinates to world coordinates
-        world_x = (screen_x - SCREEN_WIDTH // 2 + self.x * self.zoom) / self.zoom
-        world_y = (screen_y - SCREEN_HEIGHT // 2 + self.y * self.zoom) / self.zoom
-
-        return world_x, world_y
-
-    def is_in_view(self, obj_x, obj_y, margin=0):
-        half_w = (SCREEN_WIDTH + (RENDER_BUFFER * self.zoom)) / (2 * self.zoom)
-        half_h = (SCREEN_HEIGHT + (RENDER_BUFFER * self.zoom)) / (2 * self.zoom)
-        cam_left = self.x - half_w
-        cam_right = self.x + half_w
-        cam_top = self.y - half_h
-        cam_bottom = self.y + half_h
-        return (cam_left - margin <= obj_x <= cam_right + margin and
-                cam_top - margin <= obj_y <= cam_bottom + margin)
-
-    def world_to_screen(self, obj_x, obj_y):
-        screen_x = (obj_x - self.x) * self.zoom + SCREEN_WIDTH // 2
-        screen_y = (obj_y - self.y) * self.zoom + SCREEN_HEIGHT // 2
-        return int(screen_x), int(screen_y)
-
-    def get_relative_size(self, world_size):
-        # Converts a world size (e.g., radius or width/height) to screen pixels
-        return int(world_size * self.zoom)
+DEFAULT_TPS = 5  # Amount of ticks per second for the simulation
 
 
 def draw_grid(screen, camera, showing_grid=True):
@@ -199,11 +104,12 @@ def draw_grid(screen, camera, showing_grid=True):
         for start, end in horizontal_lines:
             pygame.draw.line(screen, GRAY, start, end)
 
+
 def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), vsync=1)
     pygame.display.set_caption("Dynamic Abstraction System Testing")
     clock = pygame.time.Clock()
-    camera = Camera()
+    camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT, RENDER_BUFFER)
 
     is_showing_grid = True  # Flag to control grid visibility
 
@@ -214,6 +120,13 @@ def main():
     last_tps_time = time.perf_counter()  # Tracks the last TPS calculation time
     tick_counter = 0  # Counts ticks executed
     actual_tps = 0  # Stores the calculated TPS
+    total_ticks = 0  # Total ticks executed
+
+    # Selection state
+    selecting = False
+    select_start = None  # (screen_x, screen_y)
+    select_end = None  # (screen_x, screen_y)
+    selected_objects = []
 
     print("Controls:")
     print("WASD - Move camera")
@@ -225,8 +138,8 @@ def main():
     # Initialize world
     world = World()
 
-    world.add_object(DebugRenderObject(Position(0,0)))
-    world.add_object(FoodObject(Position(100, 0)))
+    world.add_object(DebugRenderObject(Position(0, 0)))
+    world.add_object(DebugRenderObject(Position(20, 0)))
 
     running = True
     while running:
@@ -238,7 +151,8 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    running = False
+                    selecting = False
+                    selected_objects = []
                 if event.key == pygame.K_g:
                     is_showing_grid = not is_showing_grid
                 if event.key == pygame.K_UP:
@@ -252,11 +166,52 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 2:  # Middle mouse button
                     camera.start_panning(event.pos)
+                elif event.button == 1:  # Left mouse button
+                    selecting = True
+                    select_start = event.pos
+                    select_end = event.pos
             elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 2:  # Middle mouse button
+                if event.button == 2:
                     camera.stop_panning()
+                elif event.button == 1 and selecting:
+                    selecting = False
+                    # Convert screen to world coordinates
+                    x1, y1 = camera.get_real_coordinates(*select_start)
+                    x2, y2 = camera.get_real_coordinates(*select_end)
+                    # If the selection rectangle is very small, treat as a click
+                    if (
+                            abs(select_start[0] - select_end[0]) < 3
+                            and abs(select_start[1] - select_end[1]) < 3
+                    ):
+                        # Single click: select closest object if in range
+                        mouse_world_x, mouse_world_y = camera.get_real_coordinates(
+                            *select_start
+                        )
+                        obj = world.query_closest_object(mouse_world_x, mouse_world_y)
+                        selected_objects = []
+                        if obj:
+                            obj_x, obj_y = obj.position.get_position()
+                            # Calculate distance in world coordinates
+                            dx = obj_x - mouse_world_x
+                            dy = obj_y - mouse_world_y
+                            dist = (dx ** 2 + dy ** 2) ** 0.5
+                            if dist <= obj.max_visual_width / 2:
+                                selected_objects = [obj]
+                        print(f"Clicked: selected {len(selected_objects)} object(s)")
+                    else:
+                        # Drag select: select all in rectangle
+                        min_x, max_x = min(x1, x2), max(x1, x2)
+                        min_y, max_y = min(y1, y2), max(y1, y2)
+                        selected_objects = world.query_objects_in_range(
+                            min_x, min_y, max_x, max_y
+                        )
+                        print(
+                            f"Selected {len(selected_objects)} objects in range: {min_x}, {min_y} to {max_x}, {max_y}"
+                        )
             elif event.type == pygame.MOUSEMOTION:
                 camera.pan(event.pos)
+                if selecting:
+                    select_end = event.pos
 
         # Get pressed keys for smooth movement
         keys = pygame.key.get_pressed()
@@ -267,7 +222,9 @@ def main():
         while current_time - last_tick_time >= tick_interval:
             last_tick_time += tick_interval
             tick_counter += 1
+            total_ticks += 1
             # Add your tick-specific logic here
+
             print("Tick logic executed")
             world.tick_all()
 
@@ -283,10 +240,37 @@ def main():
         # Render everything in the world
         world.render_all(camera, screen)
 
+        # Draw selection rectangle if selecting
+        if selecting and select_start and select_end:
+            rect_color = (128, 128, 128, 80)  # Gray, semi-transparent
+            border_color = (80, 80, 90)  # Slightly darker gray for border
+
+            left = min(select_start[0], select_end[0])
+            top = min(select_start[1], select_end[1])
+            width = abs(select_end[0] - select_start[0])
+            height = abs(select_end[1] - select_start[1])
+
+            s = pygame.Surface((width, height), pygame.SRCALPHA)
+            s.fill(rect_color)
+            screen.blit(s, (left, top))
+
+            # Draw 1-pixel border
+            pygame.draw.rect(
+                screen, border_color, pygame.Rect(left, top, width, height), 1
+            )
+
+        # Draw blue outline for selected objects
+        for obj in selected_objects:
+            obj_x, obj_y = obj.position.get_position()
+            width = obj.max_visual_width if hasattr(obj, "max_visual_width") else 10
+            screen_x, screen_y = camera.world_to_screen(obj_x, obj_y)
+            size = camera.get_relative_size(width)
+            rect = pygame.Rect(screen_x - size // 2, screen_y - size // 2, size, size)
+            pygame.draw.rect(screen, (0, 128, 255), rect, 1)  # Blue, 1px wide
 
         # Render mouse position as text in top left of screen
         mouse_x, mouse_y = camera.get_real_coordinates(*pygame.mouse.get_pos())
-        mouse_text = font.render(f"Mouse: ({mouse_x}, {mouse_y})", True, WHITE)
+        mouse_text = font.render(f"Mouse: ({mouse_x:.2f}, {mouse_y:.2f})", True, WHITE)
         text_rect = mouse_text.get_rect()
         text_rect.topleft = (10, 10)
         screen.blit(mouse_text, text_rect)
@@ -302,6 +286,24 @@ def main():
         tps_rect = tps_text.get_rect()
         tps_rect.bottomright = (SCREEN_WIDTH - 10, SCREEN_HEIGHT - 10)
         screen.blit(tps_text, tps_rect)
+
+        # Render tick count in bottom left
+        tick_text = font.render(f"Ticks: {total_ticks}", True, WHITE)
+        tick_rect = tick_text.get_rect()
+        tick_rect.bottomleft = (10, SCREEN_HEIGHT - 10)
+        screen.blit(tick_text, tick_rect)
+
+        if len(selected_objects) >= 1:
+            i = 0
+            for each in selected_objects:
+                obj = each
+                obj_text = font.render(
+                    f"Object: {str(obj)}, Neighbors: {obj.neighbors}", True, WHITE
+                )
+                obj_rect = obj_text.get_rect()
+                obj_rect.topleft = (10, 30 + i * 20)
+                screen.blit(obj_text, obj_rect)
+                i += 1
 
         # Update display
         pygame.display.flip()
