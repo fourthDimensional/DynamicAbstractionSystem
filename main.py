@@ -1,6 +1,7 @@
 import pygame
 import time
 import sys
+import random
 
 from world.world import World, Position
 from world.render_objects import DebugRenderObject
@@ -17,6 +18,7 @@ DARK_GRAY = (64, 64, 64)
 GRAY = (128, 128, 128)
 WHITE = (255, 255, 255)
 RENDER_BUFFER = 50
+SPEED = 700 # Pixels per second
 
 # Grid settings
 GRID_WIDTH = 20  # Number of cells horizontally
@@ -227,6 +229,14 @@ def main():
 
             print("Tick logic executed")
             world.tick_all()
+
+            # gets every object in the world and returns amount of FoodObjects
+            objects = world.get_objects()
+            food = len([obj for obj in objects if isinstance(obj, FoodObject)])
+            print(f"Food count: {food}")
+            if food < 10:
+                for i in range(10 - food):
+                    world.add_object(FoodObject(Position(random.randint(-200, 200), random.randint(-200, 200))))
 
         # Calculate TPS every second
         if current_time - last_tps_time >= 1.0:

@@ -125,6 +125,9 @@ class BaseEntity(ABC):
         self.flags["death"] = True
 
 
+    def get_objects(self):
+        return self.objects
+
 class Position:
     def __init__(self, x, y):
         self.x = x
