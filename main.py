@@ -26,7 +26,7 @@ GRID_HEIGHT = 15  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
 DEFAULT_TPS = 20  # Number of ticks per second for the simulation
-FOOD_SPAWNING = True
+FOOD_SPAWNING = False
 
 
 def draw_grid(screen, camera, showing_grid=True):
@@ -150,7 +150,8 @@ def main():
     # sets seed to 67 >_<
     random.seed(67)
 
-    world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+    if FOOD_SPAWNING:
+        world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
 
     running = True
     while running:
