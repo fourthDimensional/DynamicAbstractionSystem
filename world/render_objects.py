@@ -1,4 +1,5 @@
-import random
+import random, math
+from multiprocessing.reduction import duplicate
 
 from world.world import Position, BaseEntity
 import pygame
@@ -75,6 +76,12 @@ def food_decay_yellow(decay: int) -> int:
     else:
         return 255 - decay
 
+def chance_to_grow(decay_rate):
+    return ((2**(-20*(decay_rate-1)))*12.5)+0.1
+
+def chance(percent):
+    return random.random() < percent / 100
+
 
 class FoodObject(BaseEntity):
     """
@@ -91,7 +98,7 @@ class FoodObject(BaseEntity):
         self.max_visual_width: int = 10
         self.decay: int = 0
         self.decay_rate: int = 1
-        self.max_decay = 50
+        self.max_decay = 200
         self.interaction_radius: int = 50
         self.neighbors: int = 0
         self.flags: dict[str, bool] = {
@@ -119,6 +126,18 @@ class FoodObject(BaseEntity):
         if self.decay > self.max_decay:
             self.decay = self.max_decay
             self.flag_for_death()
+
+        grow_chance = chance_to_grow(self.decay_rate * (1 + (self.neighbors / 10)))
+
+        print(grow_chance)
+
+        if chance(grow_chance):
+            print("Growing")
+            duplicate_x, duplicate_y = self.position.get_position()
+            duplicate_x += random.randint(-self.interaction_radius, self.interaction_radius)
+            duplicate_y += random.randint(-self.interaction_radius, self.interaction_radius)
+
+            return [self, FoodObject(Position(x=duplicate_x, y=duplicate_y))]
 
         return self
 
