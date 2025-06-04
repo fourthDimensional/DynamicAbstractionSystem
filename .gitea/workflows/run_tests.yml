@@ -22,7 +22,7 @@ jobs:
       run: uv sync --locked --all-extras --dev
 
     - name: Run tests
-      run: uv run pytest tests --junit-xml=pytest-results.xml
+      run: PYTHONPATH=$(pwd) uv run pytest tests --junit-xml=pytest-results.xml
 
     - name: Upload test results
       if: always()
@@ -34,4 +34,4 @@ jobs:
 
     - name: Print test summary
       if: always()
-      run: uv run pytest tests --tb=short || true
+      run: PYTHONPATH=$(pwd) uv run pytest tests --tb=short || true
