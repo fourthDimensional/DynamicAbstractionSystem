@@ -150,6 +150,8 @@ def main():
     # sets seed to 67 >_<
     random.seed(67)
 
+    world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+
     running = True
     while running:
         deltatime = clock.get_time() / 1000.0  # Convert milliseconds to seconds
@@ -242,8 +244,8 @@ def main():
                 objects = world.get_objects()
                 food = len([obj for obj in objects if isinstance(obj, FoodObject)])
 
-                if food < 10 and FOOD_SPAWNING == True:
-                    world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+                # if food < 10 and FOOD_SPAWNING == True:
+                #     world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
 
                 # ensure selected objects are still valid or have not changed position, if so, reselect them
                 selected_objects = [
