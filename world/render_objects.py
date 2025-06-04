@@ -151,4 +151,4 @@ class FoodObject(BaseEntity):
 
         :return: String representation.
         """
-        return f"FoodObject({self.position}, decay={self.decay:.0f  }, decay_rate={self.decay_rate * (1 + (self.neighbors / 10))})"
+        return f"FoodObject({self.position}, decay={self.decay:.1f}, decay_rate={self.decay_rate * (1 + (self.neighbors / 10))})"
