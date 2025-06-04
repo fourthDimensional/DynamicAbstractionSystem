@@ -116,6 +116,8 @@ def main():
 
     is_showing_grid = True  # Flag to control grid visibility
     show_interaction_radius = False  # Flag to control interaction radius visibility
+    showing_legend = False  # Flag to control legend visibility
+    is_paused = False  # Flag to control simulation pause state
 
     font = pygame.font.Font("freesansbold.ttf", 16)
 
@@ -158,6 +160,8 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
+                    if len(selected_objects) == 0:
+                        running = False
                     selecting = False
                     selected_objects = []
                 if event.key == pygame.K_g:
@@ -170,6 +174,10 @@ def main():
                         camera.speed -= 350
                 if event.key == pygame.K_i:
                     show_interaction_radius = not show_interaction_radius
+                if event.key == pygame.K_l:
+                    showing_legend = not showing_legend
+                if event.key == pygame.K_SPACE:
+                    is_paused = not is_paused
             elif event.type == pygame.MOUSEWHEEL:
                 camera.handle_zoom(event.y)
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -222,36 +230,40 @@ def main():
                 if selecting:
                     select_end = event.pos
 
+        if not is_paused:
+            # Tick logic (runs every tick interval)
+            current_time = time.perf_counter()
+            while current_time - last_tick_time >= tick_interval:
+                last_tick_time += tick_interval
+                tick_counter += 1
+                total_ticks += 1
+
+                # gets every object in the world and returns amount of FoodObjects
+                objects = world.get_objects()
+                food = len([obj for obj in objects if isinstance(obj, FoodObject)])
+
+                if food < 10 and FOOD_SPAWNING == True:
+                    world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+
+                # ensure selected objects are still valid or have not changed position, if so, reselect them
+                selected_objects = [
+                    obj for obj in selected_objects if obj in world.get_objects()
+                ]
+
+                world.tick_all()
+
+            # Calculate TPS every second
+            if current_time - last_tps_time >= 1.0:
+                actual_tps = tick_counter
+                tick_counter = 0
+                last_tps_time += 1.0
+        else:
+            last_tick_time = time.perf_counter()
+            last_tps_time = time.perf_counter()
+
         # Get pressed keys for smooth movement
         keys = pygame.key.get_pressed()
         camera.update(keys, deltatime)
-
-        # Tick logic (runs every tick interval)
-        current_time = time.perf_counter()
-        while current_time - last_tick_time >= tick_interval:
-            last_tick_time += tick_interval
-            tick_counter += 1
-            total_ticks += 1
-
-            # gets every object in the world and returns amount of FoodObjects
-            objects = world.get_objects()
-            food = len([obj for obj in objects if isinstance(obj, FoodObject)])
-
-            if food < 10 and FOOD_SPAWNING == True:
-                world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
-
-            # ensure selected objects are still valid or have not changed position, if so, reselect them
-            selected_objects = [
-                obj for obj in selected_objects if obj in world.get_objects()
-            ]
-
-            world.tick_all()
-
-        # Calculate TPS every second
-        if current_time - last_tps_time >= 1.0:
-            actual_tps = tick_counter
-            tick_counter = 0
-            last_tps_time += 1.0
 
         # Draw the reference grid
         draw_grid(screen, camera, is_showing_grid)
@@ -339,6 +351,70 @@ def main():
                 obj_rect.topleft = (10, 30 + i * 20)
                 screen.blit(obj_text, obj_rect)
                 i += 1
+
+        legend_font = pygame.font.Font("freesansbold.ttf", 14)
+
+        keymap_legend = [
+            ("WASD", "Move camera"),
+            ("Mouse wheel", "Zoom in/out"),
+            ("Middle mouse", "Pan camera"),
+            ("R", "Reset camera"),
+            ("G", "Toggle grid"),
+            ("I", "Toggle interaction radius"),
+            ("ESC", "Deselect/Exit"),
+            ("Left click", "Select object(s)"),
+            ("Drag select", "Select multiple objects"),
+            ("Click on object", "Select closest object in range"),
+            ("Up/Down", "Increase/Decrease camera speed"),
+            ("L", "Toggle this legend"),
+            ("Space", "Pause/Resume simulation"),
+        ]
+
+        if showing_legend:
+            # Split into two columns
+            mid = (len(keymap_legend) + 1) // 2
+            left_col = keymap_legend[:mid]
+            right_col = keymap_legend[mid:]
+
+            legend_font_height = legend_font.get_height()
+            column_gap = 40  # Space between columns
+
+            # Calculate max width for each column
+            left_width = max(legend_font.size(f"{k}: {v}")[0] for k, v in left_col)
+            right_width = max(legend_font.size(f"{k}: {v}")[0] for k, v in right_col)
+            legend_width = left_width + right_width + column_gap
+            legend_height = max(len(left_col), len(right_col)) * legend_font_height + 10
+
+            legend_x = (SCREEN_WIDTH - legend_width) // 2
+            legend_y = SCREEN_HEIGHT - legend_height - 10
+
+            # Draw left column
+            for i, (key, desc) in enumerate(left_col):
+                text = legend_font.render(f"{key}: {desc}", True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.left = legend_x
+                text_rect.top = legend_y + 5 + i * legend_font_height
+                screen.blit(text, text_rect)
+
+            # Draw right column
+            for i, (key, desc) in enumerate(right_col):
+                text = legend_font.render(f"{key}: {desc}", True, WHITE)
+                text_rect = text.get_rect()
+                text_rect.left = legend_x + left_width + column_gap
+                text_rect.top = legend_y + 5 + i * legend_font_height
+                screen.blit(text, text_rect)
+        else:
+            # just show l to toggle legend
+            legend_text = legend_font.render("Press 'L' to show controls", True, WHITE)
+            legend_rect = legend_text.get_rect()
+            legend_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 20)
+            screen.blit(legend_text, legend_rect)
+
+        if is_paused:
+            pause_text = font.render("Press 'Space' to unpause", True, WHITE)
+            pause_rect = pause_text.get_rect()
+            pause_rect.center = (SCREEN_WIDTH // 2, 20)
+            screen.blit(pause_text, pause_rect)
 
         # Update display
         pygame.display.flip()
