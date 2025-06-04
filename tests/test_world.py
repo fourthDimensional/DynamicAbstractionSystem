@@ -83,5 +83,9 @@ def test_tick_all_calls_tick(world):
 
 def test_add_object_out_of_bounds(world):
     entity = DummyEntity(Position(x=1000, y=1000))
-    with pytest.raises(ValueError):
-        world.add_object(entity)
+
+    world.add_object(entity)
+
+    entity = world.get_objects()[0]
+
+    assert entity.position.x == 49 and entity.position.y == 49
