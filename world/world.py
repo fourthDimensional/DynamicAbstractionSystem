@@ -101,6 +101,12 @@ class World:
                     closest_obj = obj
         return closest_obj
 
+    def get_objects(self):
+        all_objects = []
+        for obj_list in self.buffers[self.current_buffer].values():
+            all_objects.extend(obj_list)
+        print("All objects: ", all_objects)
+        return all_objects
 
 class BaseEntity(ABC):
     def __init__(self, position: "Position"):
@@ -124,12 +130,8 @@ class BaseEntity(ABC):
     def flag_for_death(self):
         self.flags["death"] = True
 
-
-    def get_objects(self):
-        return self.objects
-
 class Position:
-    def __init__(self, x, y):
+    def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
 

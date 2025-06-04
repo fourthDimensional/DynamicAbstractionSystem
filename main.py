@@ -4,7 +4,7 @@ import sys
 import random
 
 from world.world import World, Position
-from world.render_objects import DebugRenderObject
+from world.render_objects import DebugRenderObject, FoodObject
 from world.simulation_interface import Camera
 
 # Initialize Pygame
@@ -25,11 +25,12 @@ GRID_WIDTH = 20  # Number of cells horizontally
 GRID_HEIGHT = 15  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
-DEFAULT_TPS = 5  # Amount of ticks per second for the simulation
+DEFAULT_TPS = 20  # Number of ticks per second for the simulation
+FOOD_SPAWNING = False
 
 
 def draw_grid(screen, camera, showing_grid=True):
-    # Fill screen with black
+    # Fill the screen with black
     screen.fill(BLACK)
 
     # Calculate effective cell size with zoom
@@ -143,6 +144,9 @@ def main():
     world.add_object(DebugRenderObject(Position(0, 0)))
     world.add_object(DebugRenderObject(Position(20, 0)))
 
+    # sets seed to 67 >_<
+    random.seed(67)
+
     running = True
     while running:
         deltatime = clock.get_time() / 1000.0  # Convert milliseconds to seconds
@@ -227,16 +231,16 @@ def main():
             total_ticks += 1
             # Add your tick-specific logic here
 
-            print("Tick logic executed")
-            world.tick_all()
-
             # gets every object in the world and returns amount of FoodObjects
             objects = world.get_objects()
+            print(objects)
             food = len([obj for obj in objects if isinstance(obj, FoodObject)])
             print(f"Food count: {food}")
-            if food < 10:
-                for i in range(10 - food):
-                    world.add_object(FoodObject(Position(random.randint(-200, 200), random.randint(-200, 200))))
+            if food < 10 and FOOD_SPAWNING == True:
+                world.add_object(FoodObject(Position(random.randint(-200, 200), random.randint(-200, 200))))
+
+            print("Tick logic executed")
+            world.tick_all()
 
         # Calculate TPS every second
         if current_time - last_tps_time >= 1.0:
@@ -308,7 +312,7 @@ def main():
             for each in selected_objects:
                 obj = each
                 obj_text = font.render(
-                    f"Object: {str(obj)}, Neighbors: {obj.neighbors}", True, WHITE
+                    f"Object: {str(obj)}", True, WHITE
                 )
                 obj_rect = obj_text.get_rect()
                 obj_rect.topleft = (10, 30 + i * 20)

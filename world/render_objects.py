@@ -39,17 +39,39 @@ class DebugRenderObject(BaseEntity):
 
     def __repr__(self):
         return f"DebugRenderObject({self.position}, neighbors={self.neighbors})"
-class FoodObject:
-    def __init__(self, position: Position):
-        self.decay = 0
-        self.position = position
 
-    def tick(self):
+class FoodObject(BaseEntity):
+    def __init__(self, position: Position):
+        super().__init__(position)
+
+        self.max_visual_width = 10
+        self.decay = 0
+        self.interaction_radius = 50
+        self.flags = {
+            "death": False,
+            "can_interact": True,
+        }
+
+    def tick(self, interactable=None):
+        if interactable is None:
+            interactable = []
+
         self.decay += 1
 
         if self.decay > 255:
-            self.decay = 0 # eventually will raise a destroy flag
+            self.decay = 255
+            self.flag_for_death()
+
+        return self
 
     def render(self, camera, screen):
         if camera.is_in_view(*self.position.get_position()):
-            pygame.draw.circle(screen, (255-self.decay,food_decay_yellow(self.decay),0), camera.world_to_screen(*self.position.get_position()), 5 * camera.zoom)
+            pygame.draw.circle(
+                screen,
+                (255-self.decay,food_decay_yellow(self.decay),0),
+                camera.world_to_screen(*self.position.get_position()),
+                5 * camera.zoom
+            )
+
+    def __repr__(self):
+        return f"FoodObject({self.position}, decay={self.decay})"
