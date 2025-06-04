@@ -129,10 +129,10 @@ class FoodObject(BaseEntity):
 
         grow_chance = chance_to_grow(self.decay_rate * (1 + (self.neighbors / 10)))
 
-        print(grow_chance)
+        # print(grow_chance)
 
         if chance(grow_chance):
-            print("Growing")
+            # print("Growing")
             duplicate_x, duplicate_y = self.position.get_position()
             duplicate_x += random.randint(-self.interaction_radius, self.interaction_radius)
             duplicate_y += random.randint(-self.interaction_radius, self.interaction_radius)
