@@ -140,7 +140,7 @@ def main():
     print("ESC or close window - Exit")
 
     # Initialize world
-    world = World(CELL_SIZE)
+    world = World(CELL_SIZE, (CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT))
 
     world.add_object(DebugRenderObject(Position(x=0, y=0)))
     world.add_object(DebugRenderObject(Position(x=20, y=0)))
@@ -238,7 +238,7 @@ def main():
             food = len([obj for obj in objects if isinstance(obj, FoodObject)])
 
             if food < 10 and FOOD_SPAWNING == True:
-                world.add_object(FoodObject(Position(x=random.randint(-200, 200), y=random.randint(-200, 200))))
+                world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
 
             # ensure selected objects are still valid or have not changed position, if so, reselect them
             selected_objects = [

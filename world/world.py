@@ -90,7 +90,7 @@ class World:
     A world-class that contains and manages all objects in the game using spatial partitioning.
     """
 
-    def __init__(self, partition_size: int = 10) -> None:
+    def __init__(self, partition_size: int = 10, world_size: tuple[int, int] = (400, 300)) -> None:
         """
         Initializes the world with a partition size.
 
@@ -98,6 +98,7 @@ class World:
         """
         self.partition_size: int = partition_size
         self.buffers: List[Dict[Tuple[int, int], List[BaseEntity]]] = [defaultdict(list), defaultdict(list)]
+        self.world_size: Tuple[int, int] = world_size
         self.current_buffer: int = 0
 
     def _hash_position(self, position: Position) -> Tuple[int, int]:
@@ -107,6 +108,11 @@ class World:
         :param position: A Position object representing the position in the world.
         :return: Tuple (cell_x, cell_y) representing the cell coordinates.
         """
+        # Ensure position is within world bounds, considering a center origin
+        if position.x < -self.world_size[0] / 2 or position.x >= self.world_size[0] / 2 or position.y < - \
+        self.world_size[1] / 2 or position.y >= self.world_size[1] / 2:
+            raise ValueError(f"Position is out of world bounds. {position} is out of bounds.")
+
         return int(position.x // self.partition_size), int(position.y // self.partition_size)
 
     def render_all(self, camera: Any, screen: Any) -> None:
