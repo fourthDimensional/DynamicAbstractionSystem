@@ -34,6 +34,8 @@ class Camera:
         self.screen_width: int = screen_width
         self.screen_height: int = screen_height
         self.render_buffer: int = render_buffer
+        self.min_zoom: float = 50.0  # Maximum zoom level
+        self.max_zoom: float = 0.01  # Minimum zoom level
 
     def update(self, keys: Sequence[bool], deltatime: float) -> None:
         """
@@ -94,7 +96,7 @@ class Camera:
         elif zoom_delta < 0:
             self.target_zoom /= zoom_factor
 
-        self.target_zoom = max(0.1, min(5.0, self.target_zoom))
+        self.target_zoom = max(self.max_zoom, min(self.min_zoom, self.target_zoom))
 
     def start_panning(self, mouse_pos: Sequence[int]) -> None:
         """
