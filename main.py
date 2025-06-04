@@ -26,7 +26,7 @@ GRID_HEIGHT = 15  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
 DEFAULT_TPS = 20  # Number of ticks per second for the simulation
-FOOD_SPAWNING = False
+FOOD_SPAWNING = True
 
 
 def draw_grid(screen, camera, showing_grid=True):
@@ -238,6 +238,11 @@ def main():
             print(f"Food count: {food}")
             if food < 10 and FOOD_SPAWNING == True:
                 world.add_object(FoodObject(Position(random.randint(-200, 200), random.randint(-200, 200))))
+
+            # ensure selected objects are still valid or have not changed position, if so, reselect them
+            selected_objects = [
+                obj for obj in selected_objects if obj in world.get_objects()
+            ]
 
             print("Tick logic executed")
             world.tick_all()
