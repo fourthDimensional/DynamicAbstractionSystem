@@ -110,7 +110,7 @@ class World:
         """
         # Ensure position is within world bounds, considering a center origin
         if position.x < -self.world_size[0] / 2 or position.x >= self.world_size[0] / 2 or position.y < - \
-                self.world_size[1] / 2 or position.y >= self.world_size[1] / 2:
+        self.world_size[1] / 2 or position.y >= self.world_size[1] / 2:
             # force position to be within bounds
             position.x = max(-self.world_size[0] / 2, min(position.x, self.world_size[0] / 2 - 1))
             position.y = max(-self.world_size[1] / 2, min(position.y, self.world_size[1] / 2 - 1))

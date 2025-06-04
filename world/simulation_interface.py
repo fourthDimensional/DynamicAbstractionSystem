@@ -80,7 +80,7 @@ class Camera:
         zoom_smoothing_factor = 1 - pow(1 - self.zoom_smoothing, deltatime * 60)
         self.zoom += (self.target_zoom - self.zoom) * zoom_smoothing_factor
 
-        zoom_threshold = 0.001
+        zoom_threshold = 0.01
         if abs(self.zoom - self.target_zoom) < zoom_threshold:
             self.zoom = self.target_zoom
 
