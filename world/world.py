@@ -1,33 +1,131 @@
 from collections import defaultdict
 from abc import ABC, abstractmethod
+from typing import List, Dict, Tuple, Optional, Any, TypeVar, Union
+from pydantic import BaseModel, Field
+
+T = TypeVar("T", bound="BaseEntity")
+
+
+class Position(BaseModel):
+    """
+    Represents a 2D position in the world.
+    """
+    x: int = Field(..., description="X coordinate")
+    y: int = Field(..., description="Y coordinate")
+
+    def __str__(self) -> str:
+        return f"({self.x}, {self.y})"
+
+    def __repr__(self) -> str:
+        return f"Position({self.x}, {self.y})"
+
+    def set_position(self, x: int, y: int) -> None:
+        """
+        Sets the position to the given coordinates.
+
+        :param x: New X coordinate.
+        :param y: New Y coordinate.
+        """
+        self.x = x
+        self.y = y
+
+    def get_position(self) -> Tuple[int, int]:
+        """
+        Returns the current position as a tuple.
+
+        :return: Tuple of (x, y).
+        """
+        return self.x, self.y
+
+
+class BaseEntity(ABC):
+    """
+    Abstract base class for all entities in the world.
+    """
+
+    def __init__(self, position: Position) -> None:
+        """
+        Initializes the entity with a position.
+
+        :param position: The position of the entity.
+        """
+        self.position: Position = position
+        self.interaction_radius: int = 0
+        self.flags: Dict[str, bool] = {
+            "death": False,
+            "can_interact": False,
+        }
+        self.world_callbacks: Dict[str, Any] = {}
+        self.max_visual_width: int = 0
+
+    @abstractmethod
+    def tick(self, interactable: Optional[List["BaseEntity"]] = None) -> Optional["BaseEntity"]:
+        """
+        Updates the entity for a single tick.
+
+        :param interactable: List of entities this entity can interact with.
+        :return: The updated entity or None if it should be removed.
+        """
+        return self
+
+    @abstractmethod
+    def render(self, camera: Any, screen: Any) -> None:
+        """
+        Renders the entity on the screen.
+
+        :param camera: The camera object for coordinate transformation.
+        :param screen: The Pygame screen surface.
+        """
+        pass
+
+    def flag_for_death(self) -> None:
+        """
+        Flags the entity for removal from the world.
+        """
+        self.flags["death"] = True
 
 
 class World:
-    def __init__(self, partition_size=10):
-        self.partition_size = partition_size
-        self.buffers = [defaultdict(list), defaultdict(list)]
-        self.current_buffer = 0
+    """
+    A world-class that contains and manages all objects in the game using spatial partitioning.
+    """
 
-    def _hash_position(self, position):
-        # Map world coordinates to cell coordinates
-        return int(position.x // self.partition_size), int(
-            position.y // self.partition_size
-        )
+    def __init__(self, partition_size: int = 10) -> None:
+        """
+        Initializes the world with a partition size.
 
-    def render_all(self, camera, screen):
+        :param partition_size: The size of each partition cell in the world.
+        """
+        self.partition_size: int = partition_size
+        self.buffers: List[Dict[Tuple[int, int], List[BaseEntity]]] = [defaultdict(list), defaultdict(list)]
+        self.current_buffer: int = 0
+
+    def _hash_position(self, position: Position) -> Tuple[int, int]:
+        """
+        Hashes a position into a cell based on the partition size.
+
+        :param position: A Position object representing the position in the world.
+        :return: Tuple (cell_x, cell_y) representing the cell coordinates.
+        """
+        return int(position.x // self.partition_size), int(position.y // self.partition_size)
+
+    def render_all(self, camera: Any, screen: Any) -> None:
+        """
+        Renders all objects in the current buffer.
+
+        :param camera: The camera object for coordinate transformation.
+        :param screen: The Pygame screen surface.
+        """
         for obj_list in self.buffers[self.current_buffer].values():
             for obj in obj_list:
                 obj.render(camera, screen)
 
-    def tick_all(self):
-        next_buffer = 1 - self.current_buffer
+    def tick_all(self) -> None:
+        """
+        Advances all objects in the world by one tick, updating their state and handling interactions.
+        """
+        next_buffer: int = 1 - self.current_buffer
         self.buffers[next_buffer].clear()
-
-        # print all objects in the current buffer
-        print(
-            f"Ticking objects in buffer {self.current_buffer}:",
-            self.buffers[self.current_buffer].values(),
-        )
 
         for obj_list in self.buffers[self.current_buffer].values():
             for obj in obj_list:
@@ -38,24 +136,44 @@ class World:
                         obj.position.x, obj.position.y, obj.interaction_radius
                     )
                     interactable.remove(obj)
-                    print(f"Object {obj} interacting with {len(interactable)} objects.")
                     new_obj = obj.tick(interactable)
                 else:
                     new_obj = obj.tick()
                 if new_obj is None:
                     continue
-                cell = self._hash_position(new_obj.position)
-                self.buffers[next_buffer][cell].append(new_obj)
+
+                # reproduction code
+                if isinstance(new_obj, list):
+                    for item in new_obj:
+                        if isinstance(item, BaseEntity):
+                            cell = self._hash_position(item.position)
+                            self.buffers[next_buffer][cell].append(item)
+                else:
+                    cell = self._hash_position(new_obj.position)
+                    self.buffers[next_buffer][cell].append(new_obj)
         self.current_buffer = next_buffer
 
-    def add_object(self, new_object):
+    def add_object(self, new_object: BaseEntity) -> None:
+        """
+        Adds a new object to the world in the appropriate cell.
+
+        :param new_object: The object to add.
+        """
         cell = self._hash_position(new_object.position)
         self.buffers[self.current_buffer][cell].append(new_object)
 
-    def query_objects_within_radius(self, x, y, radius):
-        result = []
+    def query_objects_within_radius(self, x: float, y: float, radius: float) -> List[BaseEntity]:
+        """
+        Returns all objects within a given radius of a point.
+
+        :param x: X coordinate of the center.
+        :param y: Y coordinate of the center.
+        :param radius: Search radius.
+        :return: List of objects within the radius.
+        """
+        result: List[BaseEntity] = []
         cell_x, cell_y = int(x // self.partition_size), int(y // self.partition_size)
-        cells_to_check = []
+        cells_to_check: List[Tuple[int, int]] = []
         r = int((radius // self.partition_size) + 1)
         for dx in range(-r, r + 1):
             for dy in range(-r, r + 1):
@@ -69,8 +187,17 @@ class World:
                     result.append(obj)
         return result
 
-    def query_objects_in_range(self, x1, y1, x2, y2):
-        result = []
+    def query_objects_in_range(self, x1: float, y1: float, x2: float, y2: float) -> List[BaseEntity]:
+        """
+        Returns all objects within a rectangular range.
+
+        :param x1: Minimum X coordinate.
+        :param y1: Minimum Y coordinate.
+        :param x2: Maximum X coordinate.
+        :param y2: Maximum Y coordinate.
+        :return: List of objects within the rectangle.
+        """
+        result: List[BaseEntity] = []
         cell_x1, cell_y1 = (
             int(x1 // self.partition_size),
             int(y1 // self.partition_size),
@@ -87,9 +214,16 @@ class World:
                         result.append(obj)
         return result
 
-    def query_closest_object(self, x, y):
-        closest_obj = None
-        closest_distance = float("inf")
+    def query_closest_object(self, x: float, y: float) -> Optional[BaseEntity]:
+        """
+        Returns the closest object to a given point.
+
+        :param x: X coordinate of the point.
+        :param y: Y coordinate of the point.
+        :return: The closest object or None if no objects exist.
+        """
+        closest_obj: Optional[BaseEntity] = None
+        closest_distance: float = float("inf")
         for obj_list in self.buffers[self.current_buffer].values():
             for obj in obj_list:
                 obj_x, obj_y = obj.position.get_position()
@@ -101,49 +235,13 @@ class World:
                     closest_obj = obj
         return closest_obj
 
-    def get_objects(self):
-        all_objects = []
+    def get_objects(self) -> List[BaseEntity]:
+        """
+        Returns a list of all objects currently in the world.
+
+        :return: List of all objects.
+        """
+        all_objects: List[BaseEntity] = []
         for obj_list in self.buffers[self.current_buffer].values():
             all_objects.extend(obj_list)
-        print("All objects: ", all_objects)
         return all_objects
-
-class BaseEntity(ABC):
-    def __init__(self, position: "Position"):
-        self.position = position
-        self.interaction_radius = 0
-        self.flags = {
-            "death": False,
-            "can_interact": False,
-        }
-        self.world_callbacks = {}
-        self.max_visual_width = 0
-
-    @abstractmethod
-    def tick(self, interactable=None):
-        return self
-
-    @abstractmethod
-    def render(self, camera, screen):
-        pass
-
-    def flag_for_death(self):
-        self.flags["death"] = True
-
-class Position:
-    def __init__(self, x: int, y: int):
-        self.x = x
-        self.y = y
-
-    def __str__(self):
-        return f"({self.x}, {self.y})"
-
-    def __repr__(self):
-        return f"Position({self.x}, {self.y})"
-
-    def set_position(self, x, y):
-        self.x = x
-        self.y = y
-
-    def get_position(self):
-        return self.x, self.y

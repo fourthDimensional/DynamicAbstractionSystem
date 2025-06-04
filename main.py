@@ -141,8 +141,8 @@ def main():
     # Initialize world
     world = World()
 
-    world.add_object(DebugRenderObject(Position(0, 0)))
-    world.add_object(DebugRenderObject(Position(20, 0)))
+    world.add_object(DebugRenderObject(Position(x=0, y=0)))
+    world.add_object(DebugRenderObject(Position(x=20, y=0)))
 
     # sets seed to 67 >_<
     random.seed(67)
@@ -229,22 +229,19 @@ def main():
             last_tick_time += tick_interval
             tick_counter += 1
             total_ticks += 1
-            # Add your tick-specific logic here
 
             # gets every object in the world and returns amount of FoodObjects
             objects = world.get_objects()
-            print(objects)
             food = len([obj for obj in objects if isinstance(obj, FoodObject)])
-            print(f"Food count: {food}")
+
             if food < 10 and FOOD_SPAWNING == True:
-                world.add_object(FoodObject(Position(random.randint(-200, 200), random.randint(-200, 200))))
+                world.add_object(FoodObject(Position(x=random.randint(-200, 200), y=random.randint(-200, 200))))
 
             # ensure selected objects are still valid or have not changed position, if so, reselect them
             selected_objects = [
                 obj for obj in selected_objects if obj in world.get_objects()
             ]
 
-            print("Tick logic executed")
             world.tick_all()
 
         # Calculate TPS every second
