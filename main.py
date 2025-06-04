@@ -115,6 +115,7 @@ def main():
     camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT, RENDER_BUFFER)
 
     is_showing_grid = True  # Flag to control grid visibility
+    show_interaction_radius = False  # Flag to control interaction radius visibility
 
     font = pygame.font.Font("freesansbold.ttf", 16)
 
@@ -139,7 +140,7 @@ def main():
     print("ESC or close window - Exit")
 
     # Initialize world
-    world = World()
+    world = World(CELL_SIZE)
 
     world.add_object(DebugRenderObject(Position(x=0, y=0)))
     world.add_object(DebugRenderObject(Position(x=20, y=0)))
@@ -167,6 +168,8 @@ def main():
                 if event.key == pygame.K_DOWN:
                     if camera.speed > 350:
                         camera.speed -= 350
+                if event.key == pygame.K_i:
+                    show_interaction_radius = not show_interaction_radius
             elif event.type == pygame.MOUSEWHEEL:
                 camera.handle_zoom(event.y)
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -255,6 +258,22 @@ def main():
 
         # Render everything in the world
         world.render_all(camera, screen)
+
+        if show_interaction_radius:
+            for obj in world.get_objects():
+                obj_x, obj_y = obj.position.get_position()
+                radius = obj.interaction_radius
+                if radius > 0 and camera.is_in_view(obj_x, obj_y, margin=radius):
+                    screen_x, screen_y = camera.world_to_screen(obj_x, obj_y)
+                    screen_radius = int(radius * camera.zoom)
+                    if screen_radius > 0:
+                        pygame.draw.circle(
+                            screen,
+                            (255, 0, 0),  # Red
+                            (screen_x, screen_y),
+                            screen_radius,
+                            1  # 1 pixel thick
+                        )
 
         # Draw selection rectangle if selecting
         if selecting and select_start and select_end:
