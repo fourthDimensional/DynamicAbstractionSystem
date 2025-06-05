@@ -21,12 +21,12 @@ RENDER_BUFFER = 50
 SPEED = 700 # Pixels per second
 
 # Grid settings
-GRID_WIDTH = 20  # Number of cells horizontally
-GRID_HEIGHT = 15  # Number of cells vertically
+GRID_WIDTH = 30  # Number of cells horizontally
+GRID_HEIGHT = 25  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
-DEFAULT_TPS = 20  # Number of ticks per second for the simulation
-FOOD_SPAWNING = False
+DEFAULT_TPS = 200  # Number of ticks per second for the simulation
+FOOD_SPAWNING = True
 
 
 def draw_grid(screen, camera, showing_grid=True):
@@ -143,9 +143,6 @@ def main():
 
     # Initialize world
     world = World(CELL_SIZE, (CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT))
-
-    world.add_object(DebugRenderObject(Position(x=0, y=0)))
-    world.add_object(DebugRenderObject(Position(x=20, y=0)))
 
     # sets seed to 67 >_<
     random.seed(67)
