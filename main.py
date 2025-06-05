@@ -25,7 +25,7 @@ GRID_WIDTH = 30  # Number of cells horizontally
 GRID_HEIGHT = 25  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
-DEFAULT_TPS = 200  # Number of ticks per second for the simulation
+DEFAULT_TPS = 20  # Number of ticks per second for the simulation
 FOOD_SPAWNING = True
 
 
@@ -121,7 +121,8 @@ def main():
 
     font = pygame.font.Font("freesansbold.ttf", 16)
 
-    tick_interval = 1.0 / DEFAULT_TPS  # Time per tick
+    tps = DEFAULT_TPS  # Default ticks per second
+
     last_tick_time = time.perf_counter()  # Tracks the last tick time
     last_tps_time = time.perf_counter()  # Tracks the last TPS calculation time
     tick_counter = 0  # Counts ticks executed
@@ -153,6 +154,7 @@ def main():
     running = True
     while running:
         deltatime = clock.get_time() / 1000.0  # Convert milliseconds to seconds
+        tick_interval = 1.0 / tps  # Time per tick
 
         # Handle events
         for event in pygame.event.get():
@@ -178,6 +180,11 @@ def main():
                     showing_legend = not showing_legend
                 if event.key == pygame.K_SPACE:
                     is_paused = not is_paused
+                if event.key == pygame.K_LSHIFT:
+                    tps = DEFAULT_TPS * 2
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_LSHIFT:
+                    tps = DEFAULT_TPS
             elif event.type == pygame.MOUSEWHEEL:
                 camera.handle_zoom(event.y)
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -276,6 +283,8 @@ def main():
                 obj_x, obj_y = obj.position.get_position()
                 radius = obj.interaction_radius
                 if radius > 0 and camera.is_in_view(obj_x, obj_y, margin=radius):
+                    if selected_objects and obj not in selected_objects:
+                        continue # Skip if not selected and selecting
                     screen_x, screen_y = camera.world_to_screen(obj_x, obj_y)
                     screen_radius = int(radius * camera.zoom)
                     if screen_radius > 0:
