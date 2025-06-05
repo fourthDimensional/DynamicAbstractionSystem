@@ -375,6 +375,7 @@ def main():
             ("Drag select", "Select multiple objects"),
             ("Click on object", "Select closest object in range"),
             ("Up/Down", "Increase/Decrease camera speed"),
+            ("Shift", "Double TPS (for testing)"),
             ("L", "Toggle this legend"),
             ("Space", "Pause/Resume simulation"),
         ]
