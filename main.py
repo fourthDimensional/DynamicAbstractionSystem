@@ -26,7 +26,7 @@ GRID_HEIGHT = 25  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
 DEFAULT_TPS = 20  # Number of ticks per second for the simulation
-FOOD_SPAWNING = True
+FOOD_SPAWNING = False
 
 
 def draw_grid(screen, camera, showing_grid=True):
