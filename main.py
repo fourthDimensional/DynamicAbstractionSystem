@@ -4,7 +4,7 @@ import sys
 import random
 
 from world.world import World, Position
-from world.render_objects import DebugRenderObject, FoodObject
+from world.render_objects import DebugRenderObject, FoodObject, TestVelocityObject
 from world.simulation_interface import Camera
 
 # Initialize Pygame
@@ -62,7 +62,7 @@ def draw_grid(screen, camera, showing_grid=True):
     ):
         return  # Grid is completely off-screen
 
-    # Fill the grid area with dark gray background
+    # Fill the grid area awith dark gray background
     grid_rect = pygame.Rect(
         max(0, grid_left),
         max(0, grid_top),
@@ -146,10 +146,12 @@ def main():
     world = World(CELL_SIZE, (CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT))
 
     # sets seed to 67 >_<
-    random.seed(67)
+    random.seed(0)
 
     if FOOD_SPAWNING:
         world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+
+    world.add_object(TestVelocityObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
 
     running = True
     while running:

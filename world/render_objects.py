@@ -171,3 +171,70 @@ class FoodObject(BaseEntity):
         :return: String representation.
         """
         return f"FoodObject({self.position}, decay={self.decay:.1f}, decay_rate={self.decay_rate * (1 + (self.neighbors / 10))})"
+
+
+class TestVelocityObject(BaseEntity):
+    """
+    Test object that moves in a randomly set direction.
+    """
+
+    def __init__(self, position: Position) -> None:
+        """
+        Initializes the test velocity object.
+
+        :param position: The position of the object.
+        """
+        super().__init__(position)
+        self.velocity = (random.uniform(-0.1, 0.5), random.uniform(-0.1, 0.5))
+        self.max_visual_width: int = 10
+        self.interaction_radius: int = 50
+        self.flags: dict[str, bool] = {
+            "death": False,
+            "can_interact": True,
+        }
+
+    def tick(self, interactable: Optional[List[BaseEntity]] = None) -> "TestVelocityObject":
+        """
+        Updates the object by moving it according to its velocity.
+
+        :param interactable: List of nearby entities (unused).
+        :return: Self.
+        """
+        if interactable is None:
+            interactable = []
+
+        x, y = self.position.get_position()
+        x += self.velocity[0]
+        y += self.velocity[1]
+        self.position.set_position(x, y)
+
+        return self
+
+    def render(self, camera: Any, screen: Any) -> None:
+        """
+        Renders the test object as a circle.
+
+        :param camera: The camera object for coordinate transformation.
+        :param screen: The Pygame screen surface.
+        """
+        if camera.is_in_view(*self.position.get_position()):
+            pygame.draw.circle(
+                screen,
+                (0, 255, 0),
+                camera.world_to_screen(*self.position.get_position()),
+                int(5 * camera.zoom)
+            )
+
+    def __repr__(self) -> str:
+        """
+        Returns a string representation of the test object.
+
+        :return: String representation.
+        """
+        return f"TestVelocityObject({self.position}, velocity={self.velocity})"
+
+
+class DefaultCell(BaseEntity):
+    """
+    Cell object
+    """
