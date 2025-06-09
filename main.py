@@ -4,7 +4,7 @@ import sys
 import random
 
 from world.world import World, Position
-from world.render_objects import DebugRenderObject, FoodObject, TestVelocityObject
+from world.objects import DebugRenderObject, FoodObject, TestVelocityObject
 from world.simulation_interface import Camera
 
 # Initialize Pygame
