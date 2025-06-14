@@ -24,4 +24,8 @@ class BehavioralModel:
         """
         output_data = {}
 
+        for key in self.outputs:
+            if key not in output_data:
+                raise KeyError(f"Output key '{key}' not found in output data.")
+
         return output_data

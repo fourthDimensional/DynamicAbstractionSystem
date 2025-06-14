@@ -36,6 +36,35 @@ class Position(BaseModel):
         :return: Tuple of (x, y).
         """
         return self.x, self.y
+    
+    
+class Rotation(BaseModel):
+    """
+    Represents rotation in degrees (0-360).
+    """
+    angle: float = Field(..., description="Rotation angle in degrees", ge=0, lt=360)
+
+    def __str__(self) -> str:
+        return f"{self.angle}°"
+
+    def __repr__(self) -> str:
+        return f"Rotation({self.angle})"
+
+    def set_rotation(self, angle: float) -> None:
+        """
+        Sets the rotation angle.
+
+        :param angle: New angle in degrees (0-360).
+        """
+        self.angle = angle % 360
+
+    def get_rotation(self) -> float:
+        """
+        Returns the current rotation angle.
+
+        :return: Angle in degrees.
+        """
+        return self.angle
 
 
 class BaseEntity(ABC):
@@ -43,13 +72,14 @@ class BaseEntity(ABC):
     Abstract base class for all entities in the world.
     """
 
-    def __init__(self, position: Position) -> None:
+    def __init__(self, position: Position, rotation: Rotation) -> None:
         """
-        Initializes the entity with a position.
+        Initializes the entity with a position and rotation.
 
         :param position: The position of the entity.
         """
         self.position: Position = position
+        self.rotation: Rotation = rotation
         self.interaction_radius: int = 0
         self.flags: Dict[str, bool] = {
             "death": False,

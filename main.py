@@ -1,10 +1,12 @@
+import math
+
 import pygame
 import time
 import sys
 import random
 
-from world.world import World, Position
-from world.objects import DebugRenderObject, FoodObject, TestVelocityObject
+from world.world import World, Position, Rotation
+from world.objects import DebugRenderObject, FoodObject, TestVelocityObject, DefaultCell
 from world.simulation_interface import Camera
 
 # Initialize Pygame
@@ -26,7 +28,7 @@ GRID_HEIGHT = 25  # Number of cells vertically
 CELL_SIZE = 20  # Size of each cell in pixels
 
 DEFAULT_TPS = 20  # Number of ticks per second for the simulation
-FOOD_SPAWNING = False
+FOOD_SPAWNING = True
 
 
 def draw_grid(screen, camera, showing_grid=True):
@@ -107,6 +109,16 @@ def draw_grid(screen, camera, showing_grid=True):
         for start, end in horizontal_lines:
             pygame.draw.line(screen, GRAY, start, end)
 
+def setup(world: World):
+    if FOOD_SPAWNING:
+        world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+
+    world.add_object(TestVelocityObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+
+    world.add_object(DefaultCell(Position(x=0,y=0), Rotation(angle=0)))
+
+    return world
+
 
 def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), vsync=1)
@@ -148,10 +160,7 @@ def main():
     # sets seed to 67 >_<
     random.seed(0)
 
-    if FOOD_SPAWNING:
-        world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
-
-    world.add_object(TestVelocityObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
+    world = setup(world)
 
     running = True
     while running:
@@ -183,7 +192,7 @@ def main():
                 if event.key == pygame.K_SPACE:
                     is_paused = not is_paused
                 if event.key == pygame.K_LSHIFT:
-                    tps = DEFAULT_TPS * 2
+                    tps = DEFAULT_TPS * 4
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_LSHIFT:
                     tps = DEFAULT_TPS
@@ -251,8 +260,6 @@ def main():
                 objects = world.get_objects()
                 food = len([obj for obj in objects if isinstance(obj, FoodObject)])
 
-                # if food < 10 and FOOD_SPAWNING == True:
-                #     world.add_object(FoodObject(Position(x=random.randint(-100, 100), y=random.randint(-100, 100))))
 
                 # ensure selected objects are still valid or have not changed position, if so, reselect them
                 selected_objects = [
@@ -297,6 +304,133 @@ def main():
                             screen_radius,
                             1  # 1 pixel thick
                         )
+
+                        # Draw direction arrow
+                        rotation_angle = obj.rotation.get_rotation()
+                        arrow_length = obj.max_visual_width/2 * camera.zoom  # Scale arrow length with zoom
+                        arrow_color = (255, 255, 255)  # Green
+
+                        # Calculate the arrow's end-point based on rotation angle
+                        end_x = screen_x + arrow_length * math.cos(math.radians(rotation_angle))
+                        end_y = screen_y + arrow_length * math.sin(math.radians(rotation_angle))
+
+                        # Draw the arrow line
+                        pygame.draw.line(screen, arrow_color, (screen_x, screen_y), (end_x, end_y), 2)
+
+                        # Draw a rotated triangle for the arrowhead
+                        tip_size = 3 * camera.zoom  # Scale triangle tip size with zoom
+                        left_tip_x = end_x - tip_size * math.cos(math.radians(rotation_angle + 150 + 180))
+                        left_tip_y = end_y - tip_size * math.sin(math.radians(rotation_angle + 150 + 180))
+                        right_tip_x = end_x - tip_size * math.cos(math.radians(rotation_angle - 150 + 180))
+                        right_tip_y = end_y - tip_size * math.sin(math.radians(rotation_angle - 150 + 180))
+
+                        # Draw arrowhead (triangle) for direction
+                        pygame.draw.polygon(
+                            screen,
+                            arrow_color,
+                            [(end_x, end_y), (left_tip_x, left_tip_y), (right_tip_x, right_tip_y)]
+                        )
+
+                        # Draw angular acceleration arrow (if present)
+                        if hasattr(obj, 'angular_acceleration'):
+                            angular_acceleration = obj.angular_acceleration
+
+                            # Scale the angular acceleration value for visibility
+                            angular_accel_magnitude = abs(
+                                angular_acceleration) * 50 * camera.zoom  # Use absolute magnitude for scaling
+
+                            # Determine the perpendicular direction based on the sign of angular_acceleration
+                            angular_direction = rotation_angle + 90 if angular_acceleration >= 0 else rotation_angle - 90
+
+                            # Calculate the end of the angular acceleration vector
+                            angular_acc_end_x = end_x + angular_accel_magnitude * math.cos(
+                                math.radians(angular_direction))
+                            angular_acc_end_y = end_y + angular_accel_magnitude * math.sin(
+                                math.radians(angular_direction))
+
+                            # Draw the angular acceleration vector as a red line
+                            pygame.draw.line(screen, (52, 134, 235), (end_x, end_y),
+                                             (angular_acc_end_x, angular_acc_end_y), 2)
+
+                            # Add an arrowhead to the angular acceleration vector
+                            angular_tip_size = 2.5 * camera.zoom
+                            left_angular_tip_x = angular_acc_end_x - angular_tip_size * math.cos(
+                                math.radians(angular_direction + 150 + 180))
+                            left_angular_tip_y = angular_acc_end_y - angular_tip_size * math.sin(
+                                math.radians(angular_direction + 150 + 180))
+                            right_angular_tip_x = angular_acc_end_x - angular_tip_size * math.cos(
+                                math.radians(angular_direction - 150 + 180))
+                            right_angular_tip_y = angular_acc_end_y - angular_tip_size * math.sin(
+                                math.radians(angular_direction - 150 + 180))
+
+                            # Draw arrowhead (triangle) for angular acceleration
+                            pygame.draw.polygon(
+                                screen,
+                                (52, 134, 235),  # Red arrowhead
+                                [(angular_acc_end_x, angular_acc_end_y), (left_angular_tip_x, left_angular_tip_y),
+                                 (right_angular_tip_x, right_angular_tip_y)]
+                            )
+
+                        # If object has an acceleration attribute, draw a red vector with arrowhead
+                        if hasattr(obj, 'acceleration') and isinstance(obj.acceleration, tuple) and len(
+                                obj.acceleration) == 2:
+                            acc_x, acc_y = obj.acceleration
+
+                            # Calculate acceleration magnitude and direction
+                            acc_magnitude = math.sqrt(acc_x ** 2 + acc_y ** 2)
+                            if acc_magnitude > 0:
+                                acc_direction = math.degrees(math.atan2(acc_y, acc_x))  # Get the angle in degrees
+
+                                # Calculate scaled acceleration vector's end point
+                                acc_vector_length = acc_magnitude * 1000 * camera.zoom  # Scale length with zoom
+                                acc_end_x = screen_x + acc_vector_length * math.cos(math.radians(acc_direction))
+                                acc_end_y = screen_y + acc_vector_length * math.sin(math.radians(acc_direction))
+
+                                # Draw the acceleration vector as a red line
+                                pygame.draw.line(screen, (255, 0, 0), (screen_x, screen_y), (acc_end_x, acc_end_y), 2)
+
+                                # Add arrowhead to acceleration vector
+                                acc_tip_size = 5 * camera.zoom
+                                left_tip_x = acc_end_x - acc_tip_size * math.cos(math.radians(acc_direction + 150 + 180))
+                                left_tip_y = acc_end_y - acc_tip_size * math.sin(math.radians(acc_direction + 150 + 180))
+                                right_tip_x = acc_end_x - acc_tip_size * math.cos(math.radians(acc_direction - 150 + 180))
+                                right_tip_y = acc_end_y - acc_tip_size * math.sin(math.radians(acc_direction - 150 + 180))
+
+                                pygame.draw.polygon(
+                                    screen,
+                                    (255, 0, 0),  # Red arrowhead
+                                    [(acc_end_x, acc_end_y), (left_tip_x, left_tip_y), (right_tip_x, right_tip_y)]
+                                )
+
+                        # If object has a velocity attribute, draw a blue vector with arrowhead
+                        if hasattr(obj, 'velocity') and isinstance(obj.velocity, tuple) and len(obj.velocity) == 2:
+                            vel_x, vel_y = obj.velocity
+
+                            # Calculate velocity magnitude and direction
+                            vel_magnitude = math.sqrt(vel_x ** 2 + vel_y ** 2)
+                            if vel_magnitude > 0:
+                                vel_direction = math.degrees(math.atan2(vel_y, vel_x))  # Get the angle in degrees
+
+                                # Calculate scaled velocity vector's end point
+                                vel_vector_length = vel_magnitude * 50 * camera.zoom  # Scale length with zoom
+                                vel_end_x = screen_x + vel_vector_length * math.cos(math.radians(vel_direction))
+                                vel_end_y = screen_y + vel_vector_length * math.sin(math.radians(vel_direction))
+
+                                # Draw the velocity vector as a blue line
+                                pygame.draw.line(screen, (0, 0, 255), (screen_x, screen_y), (vel_end_x, vel_end_y), 2)
+
+                                # Add arrowhead to velocity vector
+                                vel_tip_size = 5 * camera.zoom
+                                left_tip_x = vel_end_x - vel_tip_size * math.cos(math.radians(vel_direction + 150 + 180))
+                                left_tip_y = vel_end_y - vel_tip_size * math.sin(math.radians(vel_direction + 150 + 180))
+                                right_tip_x = vel_end_x - vel_tip_size * math.cos(math.radians(vel_direction - 150 + 180))
+                                right_tip_y = vel_end_y - vel_tip_size * math.sin(math.radians(vel_direction - 150 + 180))
+
+                                pygame.draw.polygon(
+                                    screen,
+                                    (0, 0, 255),  # Blue arrowhead
+                                    [(vel_end_x, vel_end_y), (left_tip_x, left_tip_y), (right_tip_x, right_tip_y)]
+                                )
 
         # Draw selection rectangle if selecting
         if selecting and select_start and select_end:
@@ -353,14 +487,37 @@ def main():
 
         if len(selected_objects) >= 1:
             i = 0
+            max_width = SCREEN_WIDTH - 20  # Leave some padding from the right edge
             for each in selected_objects:
                 obj = each
-                obj_text = font.render(
-                    f"Object: {str(obj)}", True, WHITE
-                )
-                obj_rect = obj_text.get_rect()
-                obj_rect.topleft = (10, 30 + i * 20)
-                screen.blit(obj_text, obj_rect)
+                text = f"Object: {str(obj)}"
+                words = text.split()  # Split text into words
+                line = ""
+                line_height = 20  # Height of each line of text
+                line_offset = 0
+
+                for word in words:
+                    test_line = f"{line} {word}".strip()
+                    test_width, _ = font.size(test_line)
+
+                    # Check if the line width exceeds the limit
+                    if test_width > max_width and line:
+                        obj_text = font.render(line, True, WHITE)
+                        obj_rect = obj_text.get_rect()
+                        obj_rect.topleft = (10, 30 + i * line_height + line_offset)
+                        screen.blit(obj_text, obj_rect)
+                        line = word  # Start a new line
+                        line_offset += line_height
+                    else:
+                        line = test_line
+
+                # Render the last line
+                if line:
+                    obj_text = font.render(line, True, WHITE)
+                    obj_rect = obj_text.get_rect()
+                    obj_rect.topleft = (10, 30 + i * line_height + line_offset)
+                    screen.blit(obj_text, obj_rect)
+
                 i += 1
 
         legend_font = pygame.font.Font("freesansbold.ttf", 14)
