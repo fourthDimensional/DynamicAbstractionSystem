@@ -1,5 +1,4 @@
-import random, math
-from multiprocessing.reduction import duplicate
+import random
 
 from world.world import Position, BaseEntity
 import pygame
